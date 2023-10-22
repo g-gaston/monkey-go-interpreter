@@ -26,26 +26,17 @@ let foobar = 838383;`
 			&ast.Let{
 				Token: letToken(),
 				Name:  identifier("x"),
-				// Value: &ast.Identifier{
-				// 	Token: intToken(5),
-				// 	Value: "5",
-				// },
+				Value: literal(5),
 			},
 			&ast.Let{
 				Token: letToken(),
 				Name:  identifier("y"),
-				// Value: &ast.Identifier{
-				// 	Token: intToken(10),
-				// 	Value: "10",
-				// },
+				Value: literal(10),
 			},
 			&ast.Let{
 				Token: letToken(),
 				Name:  identifier("foobar"),
-				// Value: &ast.Identifier{
-				// 	Token: intToken(838383),
-				// 	Value: "838383",
-				// },
+				Value: literal(838383),
 			},
 		},
 	}
@@ -72,12 +63,24 @@ return 838383;`
 		Statements: []ast.Statement{
 			&ast.Return{
 				Token: returnToken(),
+				Value: &ast.Literal{
+					Token: intToken(5),
+					Value: 5,
+				},
 			},
 			&ast.Return{
 				Token: returnToken(),
+				Value: &ast.Literal{
+					Token: intToken(10),
+					Value: 10,
+				},
 			},
 			&ast.Return{
 				Token: returnToken(),
+				Value: &ast.Literal{
+					Token: intToken(838383),
+					Value: 838383,
+				},
 			},
 		},
 	}
@@ -94,28 +97,82 @@ return 838383;`
 }
 
 func TestParserParseExpressionStatement(t *testing.T) {
-	g := NewWithT(t)
-
-	input := `foobar;`
-
-	wantProgram := &ast.Root{
-		Statements: []ast.Statement{
-			&ast.ExpressionStatement{
-				Token:      identifierToken("foobar"),
-				Expression: identifier("foobar"),
+	testCases := []struct {
+		name        string
+		input       string
+		wantProgram *ast.Root
+	}{
+		{
+			name:  "with simple identifier",
+			input: `foobar;`,
+			wantProgram: &ast.Root{
+				Statements: []ast.Statement{
+					&ast.ExpressionStatement{
+						Token:      identifierToken("foobar"),
+						Expression: identifier("foobar"),
+					},
+				},
+			},
+		},
+		{
+			name:  "with simple literal",
+			input: `5;`,
+			wantProgram: &ast.Root{
+				Statements: []ast.Statement{
+					&ast.ExpressionStatement{
+						Token:      intToken(5),
+						Expression: literal(5),
+					},
+				},
+			},
+		},
+		{
+			name:  "with simple prefix expression bang",
+			input: `!5;`,
+			wantProgram: &ast.Root{
+				Statements: []ast.Statement{
+					&ast.ExpressionStatement{
+						Token: bangToken(),
+						Expression: &ast.Prefix{
+							Token:    bangToken(),
+							Operator: ast.Not,
+							Right:    literal(5),
+						},
+					},
+				},
+			},
+		},
+		{
+			name:  "with simple prefix expression -",
+			input: `-15;`,
+			wantProgram: &ast.Root{
+				Statements: []ast.Statement{
+					&ast.ExpressionStatement{
+						Token: minusToken(),
+						Expression: &ast.Prefix{
+							Token:    minusToken(),
+							Operator: ast.Negative,
+							Right:    literal(15),
+						},
+					},
+				},
 			},
 		},
 	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+			l := lexer.New(
+				lexer.NewRunePeeker(bufio.NewReader(strings.NewReader(tc.input))),
+			)
 
-	l := lexer.New(
-		lexer.NewRunePeeker(bufio.NewReader(strings.NewReader(input))),
-	)
+			p := parser.New(l)
 
-	p := parser.New(l)
-
-	program, err := p.Parse()
-	g.Expect(err).NotTo(HaveOccurred())
-	g.Expect(program).To(BeComparableTo(wantProgram))
+			program, err := p.Parse()
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(program).To(BeComparableTo(tc.wantProgram))
+		})
+	}
 }
 
 func letToken() token.Token {
@@ -139,10 +196,24 @@ func identifierToken(literal string) token.Token {
 	}
 }
 
-func intToken(n int) token.Token {
+func intToken(n int64) token.Token {
 	return token.Token{
-		Type:    token.Let,
+		Type:    token.Int,
 		Literal: fmt.Sprintf("%d", n),
+	}
+}
+
+func bangToken() token.Token {
+	return token.Token{
+		Type:    token.Bang,
+		Literal: "!",
+	}
+}
+
+func minusToken() token.Token {
+	return token.Token{
+		Type:    token.Minus,
+		Literal: "-",
 	}
 }
 
@@ -150,5 +221,12 @@ func identifier(name string) *ast.Identifier {
 	return &ast.Identifier{
 		Token: identifierToken(name),
 		Value: name,
+	}
+}
+
+func literal(value int64) *ast.Literal {
+	return &ast.Literal{
+		Token: intToken(value),
+		Value: value,
 	}
 }

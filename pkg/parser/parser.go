@@ -2,6 +2,7 @@ package parser
 
 import (
 	"errors"
+	"strconv"
 
 	// TODO: cleanup package name collision
 	perrors "github.com/pkg/errors"
@@ -20,8 +21,8 @@ type Parser struct {
 }
 
 type (
-	prefixParser func() ast.Expression
-	infixParser  func(ast.Expression) ast.Expression
+	prefixParser func() (ast.Expression, error)
+	infixParser  func(ast.Expression) (ast.Expression, error)
 )
 
 func New(lexer *lexer.Lexer) *Parser {
@@ -32,6 +33,9 @@ func New(lexer *lexer.Lexer) *Parser {
 	}
 
 	p.prefixParsers.register(token.Ident, p.parseIdentifier)
+	p.prefixParsers.register(token.Int, p.parseLiteral)
+	p.prefixParsers.register(token.Bang, p.parsePrefix)
+	p.prefixParsers.register(token.Minus, p.parsePrefix)
 
 	return p
 }
@@ -92,6 +96,13 @@ func (p *Parser) advanceToken() {
 	p.peek = t
 }
 
+func (p *Parser) assertPeek(wantTokenType token.Type) error {
+	if p.peek.Type != wantTokenType {
+		return NewError(perrors.Errorf("expected token type %s but got %s", wantTokenType, p.peek.Type), p.peek)
+	}
+	return nil
+}
+
 func (p *Parser) parseLet() (*ast.Let, error) {
 	l := &ast.Let{
 		Token: p.current,
@@ -131,7 +142,12 @@ func (p *Parser) parseExpression(precedence precedence) (ast.Expression, error) 
 		return nil, NewError(perrors.New("can't find a prefix operator for token"), p.peek)
 	}
 
-	return prefixParser(), nil
+	left, err := prefixParser()
+	if err != nil {
+		return nil, err
+	}
+	p.advanceToken() // Advancing here so we pass tests.
+	return left, nil
 }
 
 func (p *Parser) parseReturn() (*ast.Return, error) {
@@ -169,13 +185,36 @@ func (p *Parser) parseExpressionStatement() (*ast.ExpressionStatement, error) {
 	return s, nil
 }
 
-func (p *Parser) parseIdentifier() ast.Expression {
-	return &ast.Identifier{Token: p.current, Value: p.current.Literal}
+func (p *Parser) parseIdentifier() (ast.Expression, error) {
+	return &ast.Identifier{Token: p.current, Value: p.current.Literal}, nil
 }
 
-func (p *Parser) assertPeek(wantTokenType token.Type) error {
-	if p.peek.Type != wantTokenType {
-		return NewError(perrors.Errorf("expected token type %s but got %s", wantTokenType, p.peek.Type), p.peek)
+func (p *Parser) parseLiteral() (ast.Expression, error) {
+	value, err := strconv.ParseInt(p.current.Literal, 0, 64)
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	return &ast.Literal{Token: p.current, Value: value}, nil
+}
+
+func (p *Parser) parsePrefix() (ast.Expression, error) {
+	prefixExp := &ast.Prefix{
+		Token: p.current,
+	}
+	switch p.current.Literal {
+	case "!":
+		prefixExp.Operator = ast.Not
+	case "-":
+		prefixExp.Operator = ast.Negative
+	}
+
+	p.advanceToken()
+
+	right, err := p.parseExpression(prefix)
+	if err != nil {
+		return nil, err
+	}
+
+	prefixExp.Right = right
+	return prefixExp, nil
 }
