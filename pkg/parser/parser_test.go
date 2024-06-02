@@ -158,6 +158,125 @@ func TestParserParseExpressionStatement(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:  "with simple infix operator +",
+			input: `5 + 5;`,
+			wantProgram: &ast.Root{
+				Statements: []ast.Statement{
+					&ast.ExpressionStatement{
+						Token: intToken(5),
+						Expression: &ast.Infix{
+							Token:    plusToken(),
+							Left:     literal(5),
+							Operator: ast.Addition,
+							Right:    literal(5),
+						},
+					},
+				},
+			},
+		},
+		{
+			name:  "with simple infix operator *",
+			input: `5 * 5;`,
+			wantProgram: &ast.Root{
+				Statements: []ast.Statement{
+					&ast.ExpressionStatement{
+						Token: intToken(5),
+						Expression: &ast.Infix{
+							Token:    asteriskToken(),
+							Left:     literal(5),
+							Operator: ast.Multiplication,
+							Right:    literal(5),
+						},
+					},
+				},
+			},
+		},
+		{
+			name:  "with simple infix operator /",
+			input: `5 / 5;`,
+			wantProgram: &ast.Root{
+				Statements: []ast.Statement{
+					&ast.ExpressionStatement{
+						Token: intToken(5),
+						Expression: &ast.Infix{
+							Token:    slashToken(),
+							Left:     literal(5),
+							Operator: ast.Division,
+							Right:    literal(5),
+						},
+					},
+				},
+			},
+		},
+		{
+			name:  "with simple infix operator >",
+			input: `5 > 5;`,
+			wantProgram: &ast.Root{
+				Statements: []ast.Statement{
+					&ast.ExpressionStatement{
+						Token: intToken(5),
+						Expression: &ast.Infix{
+							Token:    greaterThanToken(),
+							Left:     literal(5),
+							Operator: ast.GreaterThan,
+							Right:    literal(5),
+						},
+					},
+				},
+			},
+		},
+		{
+			name:  "with simple infix operator <",
+			input: `5 < 5;`,
+			wantProgram: &ast.Root{
+				Statements: []ast.Statement{
+					&ast.ExpressionStatement{
+						Token: intToken(5),
+						Expression: &ast.Infix{
+							Token:    lessThanToken(),
+							Left:     literal(5),
+							Operator: ast.LessThan,
+							Right:    literal(5),
+						},
+					},
+				},
+			},
+		},
+		{
+			name:  "with simple infix operator ==",
+			input: `5 == 5;`,
+			wantProgram: &ast.Root{
+				Statements: []ast.Statement{
+					&ast.ExpressionStatement{
+						Token: intToken(5),
+						Expression: &ast.Infix{
+							Token:    equalToken(),
+							Left:     literal(5),
+							Operator: ast.Equal,
+							Right:    literal(5),
+						},
+					},
+				},
+			},
+		},
+		{
+			name:  "with simple infix operator !=",
+			input: `5 != 5;`,
+			wantProgram: &ast.Root{
+				Statements: []ast.Statement{
+					&ast.ExpressionStatement{
+						Token: intToken(5),
+						Expression: &ast.Infix{
+							Token:    notEqualToken(),
+							Left:     literal(5),
+							Operator: ast.NotEqual,
+							Right:    literal(5),
+						},
+					},
+				},
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -214,6 +333,55 @@ func minusToken() token.Token {
 	return token.Token{
 		Type:    token.Minus,
 		Literal: "-",
+	}
+}
+
+func plusToken() token.Token {
+	return token.Token{
+		Type:    token.Plus,
+		Literal: "+",
+	}
+}
+
+func asteriskToken() token.Token {
+	return token.Token{
+		Type:    token.Asterisk,
+		Literal: "*",
+	}
+}
+
+func slashToken() token.Token {
+	return token.Token{
+		Type:    token.Slash,
+		Literal: "/",
+	}
+}
+
+func greaterThanToken() token.Token {
+	return token.Token{
+		Type:    token.GreaterThan,
+		Literal: ">",
+	}
+}
+
+func lessThanToken() token.Token {
+	return token.Token{
+		Type:    token.LowerThan,
+		Literal: "<",
+	}
+}
+
+func equalToken() token.Token {
+	return token.Token{
+		Type:    token.Equal,
+		Literal: "==",
+	}
+}
+
+func notEqualToken() token.Token {
+	return token.Token{
+		Type:    token.NotEqual,
+		Literal: "!=",
 	}
 }
 
