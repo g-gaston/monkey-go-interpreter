@@ -277,6 +277,220 @@ func TestParserParseExpressionStatement(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:  "-a * b",
+			input: `-a * b;`,
+			wantProgram: &ast.Root{
+				Statements: []ast.Statement{
+					&ast.ExpressionStatement{
+						Token: minusToken(),
+						Expression: &ast.Infix{
+							Token: asteriskToken(),
+							Left: &ast.Prefix{
+								Token:    minusToken(),
+								Right:    identifier("a"),
+								Operator: ast.Negative,
+							},
+							Operator: ast.Multiplication,
+							Right:    identifier("b"),
+						},
+					},
+				},
+			},
+		},
+		{
+			name:  "!-a",
+			input: `!-a`,
+			wantProgram: &ast.Root{
+				Statements: []ast.Statement{
+					&ast.ExpressionStatement{
+						Token: bangToken(),
+						Expression: &ast.Prefix{
+							Token: bangToken(),
+							Right: &ast.Prefix{
+								Token:    minusToken(),
+								Right:    identifier("a"),
+								Operator: ast.Negative,
+							},
+							Operator: ast.Not,
+						},
+					},
+				},
+			},
+		},
+		{
+			name:  "a + b + c",
+			input: `a + b + c`,
+			wantProgram: &ast.Root{
+				Statements: []ast.Statement{
+					&ast.ExpressionStatement{
+						Token: identifierToken("a"),
+						Expression: &ast.Infix{
+							Token: plusToken(),
+							Left: &ast.Infix{
+								Token:    plusToken(),
+								Left:     identifier("a"),
+								Right:    identifier("b"),
+								Operator: ast.Addition,
+							},
+							Operator: ast.Addition,
+							Right:    identifier("c"),
+						},
+					},
+				},
+			},
+		},
+		{
+			name:  "a + b - c",
+			input: `a + b - c`,
+			wantProgram: &ast.Root{
+				Statements: []ast.Statement{
+					&ast.ExpressionStatement{
+						Token: identifierToken("a"),
+						Expression: &ast.Infix{
+							Token: minusToken(),
+							Left: &ast.Infix{
+								Token:    plusToken(),
+								Left:     identifier("a"),
+								Right:    identifier("b"),
+								Operator: ast.Addition,
+							},
+							Operator: ast.Subtraction,
+							Right:    identifier("c"),
+						},
+					},
+				},
+			},
+		},
+		{
+			name:  "a * b * c",
+			input: `a * b * c`,
+			wantProgram: &ast.Root{
+				Statements: []ast.Statement{
+					&ast.ExpressionStatement{
+						Token: identifierToken("a"),
+						Expression: &ast.Infix{
+							Token: asteriskToken(),
+							Left: &ast.Infix{
+								Token:    asteriskToken(),
+								Left:     identifier("a"),
+								Right:    identifier("b"),
+								Operator: ast.Multiplication,
+							},
+							Operator: ast.Multiplication,
+							Right:    identifier("c"),
+						},
+					},
+				},
+			},
+		},
+		{
+			name:  "a * b / c",
+			input: `a * b / c`,
+			wantProgram: &ast.Root{
+				Statements: []ast.Statement{
+					&ast.ExpressionStatement{
+						Token: identifierToken("a"),
+						Expression: &ast.Infix{
+							Token: slashToken(),
+							Left: &ast.Infix{
+								Token:    asteriskToken(),
+								Left:     identifier("a"),
+								Right:    identifier("b"),
+								Operator: ast.Multiplication,
+							},
+							Operator: ast.Division,
+							Right:    identifier("c"),
+						},
+					},
+				},
+			},
+		},
+		{
+			name:  "a + b / c",
+			input: `a + b / c`,
+			wantProgram: &ast.Root{
+				Statements: []ast.Statement{
+					&ast.ExpressionStatement{
+						Token: identifierToken("a"),
+						Expression: &ast.Infix{
+							Token: plusToken(),
+							Left:  identifier("a"),
+							Right: &ast.Infix{
+								Token:    slashToken(),
+								Left:     identifier("b"),
+								Right:    identifier("c"),
+								Operator: ast.Division,
+							},
+							Operator: ast.Addition,
+						},
+					},
+				},
+			},
+		},
+		{
+			name:  "a + b * c + d / e - f",
+			input: `a + b * c + d / e - f`,
+			wantProgram: &ast.Root{
+				Statements: []ast.Statement{
+					&ast.ExpressionStatement{
+						Token: identifierToken("a"),
+						Expression: sub(
+							add(
+								add("a", multiply("b", "c")),
+								divide("d", "e"),
+							),
+							"f",
+						),
+					},
+				},
+			},
+		},
+		{
+			name:  "5 > 4 == 3 < 4",
+			input: `5 > 4 == 3 < 4`,
+			wantProgram: &ast.Root{
+				Statements: []ast.Statement{
+					&ast.ExpressionStatement{
+						Token: intToken(5),
+						Expression: equal(
+							greaterThan(5, 4),
+							lessThan(3, 4),
+						),
+					},
+				},
+			},
+		},
+		{
+			name:  "5 < 4 != 3 > 4",
+			input: `5 < 4 != 3 > 4`,
+			wantProgram: &ast.Root{
+				Statements: []ast.Statement{
+					&ast.ExpressionStatement{
+						Token: intToken(5),
+						Expression: notEqual(
+							lessThan(5, 4),
+							greaterThan(3, 4),
+						),
+					},
+				},
+			},
+		},
+		{
+			name:  "3 + 4 * 5 == 3 * 1 + 4 * 5",
+			input: `3 + 4 * 5 == 3 * 1 + 4 * 5`,
+			wantProgram: &ast.Root{
+				Statements: []ast.Statement{
+					&ast.ExpressionStatement{
+						Token: intToken(3),
+						Expression: equal(
+							add(3, multiply(4, 5)),
+							add(multiply(3, 1), multiply(4, 5)),
+						),
+					},
+				},
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -396,5 +610,91 @@ func literal(value int64) *ast.Literal {
 	return &ast.Literal{
 		Token: intToken(value),
 		Value: value,
+	}
+}
+
+// castExpression is a helper function to cast a string or an ast.Expression to an ast.Expression.
+// Useful to compose expected ASTs for tests.
+func castExpression(e any) ast.Expression {
+	switch e := e.(type) {
+	case string:
+		return identifier(e)
+	case int:
+		return literal(int64(e))
+	case ast.Expression:
+		return e
+	}
+	return nil
+}
+
+func add(a, b any) *ast.Infix {
+	return &ast.Infix{
+		Token:    plusToken(),
+		Left:     castExpression(a),
+		Right:    castExpression(b),
+		Operator: ast.Addition,
+	}
+}
+
+func sub(a, b any) *ast.Infix {
+	return &ast.Infix{
+		Token:    minusToken(),
+		Left:     castExpression(a),
+		Operator: ast.Subtraction,
+		Right:    castExpression(b),
+	}
+}
+
+func multiply(a, b any) *ast.Infix {
+	return &ast.Infix{
+		Token:    asteriskToken(),
+		Left:     castExpression(a),
+		Operator: ast.Multiplication,
+		Right:    castExpression(b),
+	}
+}
+
+func divide(a, b any) *ast.Infix {
+	return &ast.Infix{
+		Token:    slashToken(),
+		Left:     castExpression(a),
+		Operator: ast.Division,
+		Right:    castExpression(b),
+	}
+}
+
+func greaterThan(a, b any) *ast.Infix {
+	return &ast.Infix{
+		Token:    greaterThanToken(),
+		Left:     castExpression(a),
+		Operator: ast.GreaterThan,
+		Right:    castExpression(b),
+	}
+}
+
+func lessThan(a, b any) *ast.Infix {
+	return &ast.Infix{
+		Token:    lessThanToken(),
+		Left:     castExpression(a),
+		Operator: ast.LessThan,
+		Right:    castExpression(b),
+	}
+}
+
+func equal(a, b any) *ast.Infix {
+	return &ast.Infix{
+		Token:    equalToken(),
+		Left:     castExpression(a),
+		Operator: ast.Equal,
+		Right:    castExpression(b),
+	}
+}
+
+func notEqual(a, b any) *ast.Infix {
+	return &ast.Infix{
+		Token:    notEqualToken(),
+		Left:     castExpression(a),
+		Operator: ast.NotEqual,
+		Right:    castExpression(b),
 	}
 }
